@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://claude.local/skills/web-offensive-security/findings-schema.json",
+  "title": "Web Offensive Security Findings",
+  "description": "Structured output of a web application security audit, designed to be consumed by a defensive/remediation skill.",
+  "type": "object",
+  "required": ["schemaVersion", "target", "generatedAt", "summary", "attackSurface", "findings", "securityScore"],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "1.0" },
+    "target": {
+      "type": "object",
+      "required": ["name", "scope", "authorized"],
+      "properties": {
+        "name": { "type": "string" },
+        "scope": { "type": "string", "description": "Repos/paths/environments in scope." },
+        "authorized": { "type": "boolean" },
+        "authorizedBy": { "type": "string" },
+        "stack": { "type": "array", "items": { "type": "string" } },
+        "environment": { "type": "string", "enum": ["static-only", "local-dynamic", "staging"] }
+      }
+    },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "summary": {
+      "type": "object",
+      "required": ["counts"],
+      "properties": {
+        "overview": { "type": "string" },
+        "counts": {
+          "type": "object",
+          "properties": {
+            "critical": { "type": "integer", "minimum": 0 },
+            "high": { "type": "integer", "minimum": 0 },
+            "medium": { "type": "integer", "minimum": 0 },
+            "low": { "type": "integer", "minimum": 0 },
+            "info": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "attackSurface": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["method", "path", "authRequired"],
+        "properties": {
+          "method": { "type": "string" },
+          "path": { "type": "string" },
+          "authRequired": { "type": "boolean" },
+          "roles": { "type": "array", "items": { "type": "string" } },
+          "inputs": { "type": "array", "items": { "type": "string" } },
+          "sinks": { "type": "array", "items": { "type": "string" } },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "severity", "category", "verified", "locations", "description", "impact", "remediation"],
+        "properties": {
+          "id": { "type": "string", "description": "Stable id, e.g. WOS-001." },
+          "title": { "type": "string" },
+          "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "info"] },
+          "cvss": {
+            "type": "object",
+            "properties": {
+              "version": { "type": "string", "const": "3.1" },
+              "vector": { "type": "string" },
+              "score": { "type": "number", "minimum": 0, "maximum": 10 }
+            }
+          },
+          "category": { "type": "string", "description": "e.g. sql-injection, xss-stored, idor, ssrf, jwt-alg-none, secrets-exposure, business-logic." },
+          "cwe": { "type": "string", "description": "e.g. CWE-89." },
+          "owasp": { "type": "string", "description": "e.g. A03:2021-Injection." },
+          "verified": { "type": "boolean", "description": "true only if proven via safe PoC against an authorized env." },
+          "confidence": { "type": "string", "enum": ["high", "medium", "low"] },
+          "locations": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": ["file"],
+              "properties": {
+                "file": { "type": "string" },
+                "line": { "type": "integer" },
+                "endLine": { "type": "integer" },
+                "function": { "type": "string" },
+                "route": { "type": "string" }
+              }
+            }
+          },
+          "description": { "type": "string", "description": "Source->sink explanation." },
+          "evidence": {
+            "type": "object",
+            "description": "Safe PoC evidence; secrets must be redacted.",
+            "properties": {
+              "type": { "type": "string", "enum": ["dynamic-poc", "static-trace", "theoretical"] },
+              "request": { "type": "string" },
+              "response": { "type": "string" },
+              "codeExcerpt": { "type": "string" },
+              "notes": { "type": "string" }
+            }
+          },
+          "impact": { "type": "string" },
+          "exploitationScenario": { "type": "string" },
+          "remediation": {
+            "type": "object",
+            "required": ["summary"],
+            "properties": {
+              "summary": { "type": "string" },
+              "fixedSnippet": { "type": "string" },
+              "references": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "remediationPriority": { "type": "string", "enum": ["P0", "P1", "P2", "P3"] }
+        }
+      }
+    },
+    "attackChains": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "steps", "endImpact", "severity"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "findingId": { "type": "string" },
+                "action": { "type": "string" }
+              }
+            }
+          },
+          "preconditions": { "type": "string" },
+          "endImpact": { "type": "string" },
+          "severity": { "type": "string", "enum": ["critical", "high", "medium", "low"] }
+        }
+      }
+    },
+    "securityScore": {
+      "type": "object",
+      "required": ["score", "band"],
+      "properties": {
+        "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "band": { "type": "string", "enum": ["strong", "good", "needs-work", "weak", "critical"] },
+        "calculation": { "type": "string", "description": "Shown arithmetic for reproducibility." }
+      }
+    },
+    "validationChecklist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["category", "tested", "result"],
+        "properties": {
+          "category": { "type": "string" },
+          "tested": { "type": "string", "enum": ["static", "dynamic", "both", "no"] },
+          "result": { "type": "string", "enum": ["pass", "findings", "not-applicable", "not-tested"] },
+          "findingIds": { "type": "array", "items": { "type": "string" } },
+          "notes": { "type": "string" }
+        }
+      }
+    }
+  }
+}
